@@ -5,20 +5,117 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portal del Alumno</title>
     <style>
-        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f0f2f5; }
-        .card { background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        input { display: block; width: 100%; margin: 10px 0; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
-        button { width: 100%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f0f2f5; margin: 0; }
+        .card { background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 350px; text-align: center; }
+        input { display: block; width: 100%; margin: 10px 0; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        button { width: 100%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .hidden { display: none; }
+        #mensaje-bienvenida { color: #28a745; font-weight: bold; }
+        .info-ficha { text-align: left; background: #f8f9fa; padding: 10px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #007bff; }
     </style>
+
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('Service Worker registrado', reg))
+            .catch(err => console.log('Error al registrar', err));
+        });
+      }
+    </script>
 </head>
 <body>
-    <div class="card">
+    <div id="contenedor-login" class="card">
         <h2>Inicio de Sesión</h2>
-        <form action="/acceder" method="post">
+        <form id="form-login">
             <label>Ingresa tu Matrícula:</label>
-            <input type="text" name="matricula" placeholder="Ej. 20230001" required>
+            <input type="text" name="matricula" id="matricula" placeholder="Ej. 20230001" required>
             <button type="submit">Validar Acceso</button>
         </form>
     </div>
+
+    <div id="contenedor-sesion" class="card hidden">
+        <h2 id="mensaje-bienvenida">¡Bienvenido!</h2>
+        <div id="info-alumno" class="info-ficha"></div>
+        <p style="color: #666; font-size: 0.8rem;">Modo Offline Activo: No necesitas conexión al profesor para ver esta ficha.</p>
+        <button onclick="cerrarSesion()" style="background: #6c757d;">Cerrar Sesión</button>
+    </div>
+
+    <script>
+        const formLogin = document.getElementById('form-login');
+        const divLogin = document.getElementById('contenedor-login');
+        const divSesion = document.getElementById('contenedor-sesion');
+
+        window.onload = function() {
+            if (localStorage.getItem('sesion_activa') === 'true') {
+                mostrarInterfazSesion();
+            }
+        };
+
+        formLogin.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const matriculaVal = document.getElementById('matricula').value;
+            const formData = new FormData();
+            formData.append('matricula', matriculaVal);
+
+            fetch('/acceder', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Ahora pasamos todos los datos que manda el servidor
+                    guardarDatosLocal(data.nombre, data.matricula, data.sede, data.grupo, data.especialidad);
+                    mostrarInterfazSesion();
+                } else {
+                    alert("La matrícula no existe en la base de datos.");
+                }
+            })
+            .catch(error => {
+                alert("Error: No se pudo conectar con el servidor del profesor.");
+            });
+        });
+
+        // Actualizado para guardar sede y grupo
+        function guardarDatosLocal(nombre, matricula, sede, grupo, especialidad) {
+            localStorage.setItem('usuario_nombre', nombre);
+            localStorage.setItem('usuario_matricula', matricula);
+            localStorage.setItem('usuario_sede', sede);
+            localStorage.setItem('usuario_grupo', grupo);
+            localStorage.setItem('usuario_especialidad', especialidad);
+            localStorage.setItem('sesion_activa', 'true');
+        }
+
+        function mostrarInterfazSesion() {
+            divLogin.classList.add('hidden');
+            divSesion.classList.remove('hidden');
+            
+            const nombre = localStorage.getItem('usuario_nombre');
+            const matricula = localStorage.getItem('usuario_matricula');
+            const sede = localStorage.getItem('usuario_sede');
+            const grupo = localStorage.getItem('usuario_grupo');
+            const especialidad = localStorage.getItem('usuario_especialidad');
+            
+            document.getElementById('mensaje-bienvenida').innerText = `¡Hola, ${nombre}!`;
+            
+            // Mostramos la ficha escolar completa
+            document.getElementById('info-alumno').innerHTML = `
+                <strong>Matrícula:</strong> ${matricula}<br>
+                <strong>Sede:</strong> ${sede}<br>
+                <strong>Grupo:</strong> ${grupo}<br>
+                <strong>Especialidad:</strong> ${especialidad}
+            `;
+        }
+
+        function cerrarSesion() {
+            if(confirm("¿Seguro que quieres cerrar sesión? Necesitarás al profesor para entrar de nuevo.")) {
+                localStorage.clear();
+                location.reload();
+            }
+        }
+    </script>
 </body>
 </html>
