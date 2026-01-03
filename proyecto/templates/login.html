@@ -2,16 +2,39 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Portal del Alumno</title>
     <style>
-        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f0f2f5; margin: 0; }
-        .card { background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 350px; text-align: center; }
-        input { display: block; width: 100%; margin: 10px 0; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
-        button { width: 100%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        .hidden { display: none; }
-        #mensaje-bienvenida { color: #28a745; font-weight: bold; }
-        .info-ficha { text-align: left; background: #f8f9fa; padding: 10px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #007bff; }
+        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #f0f2f5; margin: 0; padding: 20px; box-sizing: border-box; }
+        .card { background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
+        input { display: block; width: 100%; margin: 10px 0; padding: 12px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        .btn-menu { background: white; color: #007bff; border: 2px solid #007bff; text-align: left; margin-bottom: 8px; }
+        .btn-menu:hover { background: #e7f1ff; }
+        .btn-atras { background: none; color: #666; border: none; text-decoration: underline; width: auto; padding: 5px; font-size: 0.9rem; margin-bottom: 10px; display: block; }
+        .hidden { display: none !important; }
+        .info-ficha { text-align: left; background: #f8f9fa; padding: 10px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #007bff; font-size: 0.9rem; }
+        
+        /* VISOR REFORZADO PARA MÓVIL */
+        .visor { 
+            background: #ffffff !important; 
+            border: 2px solid #007bff; 
+            padding: 15px; 
+            margin-top: 15px; 
+            min-height: 150px; 
+            text-align: left; 
+            white-space: pre-wrap; 
+            font-size: 1rem; 
+            border-radius: 8px; 
+            max-height: 400px; 
+            overflow-y: auto; 
+            word-wrap: break-word;
+            color: #000000; /* Forzamos color negro */
+            display: block;
+        }
+        .contenedor-nota { display: flex; align-items: center; gap: 5px; margin-top: 8px; }
+        .nota-guardada { flex-grow: 1; background: #f1f1f1; padding: 10px; border-radius: 6px; font-size: 0.85rem; cursor: pointer; border-left: 4px solid #28a745; text-align: left; }
+        .btn-borrar { background: #dc3545; width: 40px; height: 40px; padding: 0; display: flex; justify-content: center; align-items: center; }
     </style>
 
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
@@ -19,38 +42,95 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
-            .then(reg => console.log('Service Worker registrado', reg))
-            .catch(err => console.log('Error al registrar', err));
+          // Registramos y forzamos actualización
+          navigator.serviceWorker.register('/sw.js').then(reg => {
+              reg.update(); 
+          });
         });
       }
     </script>
 </head>
 <body>
-    <div id="contenedor-login" class="card">
+
+    <div id="vista-login" class="card">
         <h2>Inicio de Sesión</h2>
         <form id="form-login">
             <label>Ingresa tu Matrícula:</label>
-            <input type="text" name="matricula" id="matricula" placeholder="Ej. 20230001" required>
+            <input type="text" id="matricula" placeholder="Ej. 20230001" required>
             <button type="submit">Validar Acceso</button>
         </form>
     </div>
 
-    <div id="contenedor-sesion" class="card hidden">
-        <h2 id="mensaje-bienvenida">¡Bienvenido!</h2>
+    <div id="vista-inicio" class="card hidden">
+        <h2 id="mensaje-bienvenida" style="color: #28a745;">¡Bienvenido!</h2>
         <div id="info-alumno" class="info-ficha"></div>
-        <p style="color: #666; font-size: 0.8rem;">Modo Offline Activo: No necesitas conexión al profesor para ver esta ficha.</p>
-        <button onclick="cerrarSesion()" style="background: #6c757d;">Cerrar Sesión</button>
+        <hr>
+        <h3>Mis Materias</h3>
+        <button class="btn-menu" onclick="irAMateria('Matemáticas')">📘 Matemáticas</button>
+        <button class="btn-menu" onclick="irAMateria('Programación')">💻 Programación</button>
+        <button class="btn-menu" onclick="irAMateria('Física')">⚛️ Física</button>
+        <button onclick="cerrarSesion()" style="background: #6c757d; font-size: 0.8rem;">Cerrar Sesión</button>
+    </div>
+
+    <div id="vista-temas" class="card hidden">
+        <button class="btn-atras" onclick="mostrarVista('vista-inicio')">← Volver a Inicio</button>
+        <h2 id="titulo-materia">Materia</h2>
+        <div id="lista-temas"></div>
+    </div>
+
+    <div id="vista-actividades" class="card hidden">
+        <button class="btn-atras" id="btn-volver-temas">← Volver a Temas</button>
+        <h2 id="titulo-tema">Tema</h2>
+        <p style="font-size: 0.8rem; color: #666;">Carga el archivo .txt de la actividad:</p>
+        <input type="file" id="archivo-clase" accept=".txt">
+        
+        <div id="visor-contenido" class="visor hidden"></div>
+        
+        <button id="btn-guardar-nota" class="hidden" style="background: #28a745;">💾 Guardar actividad en el celular</button>
+
+        <hr>
+        <h4>Actividades guardadas:</h4>
+        <div id="notas-locales"></div>
     </div>
 
     <script>
+        // --- NAVEGACIÓN ---
+        function mostrarVista(idVista) {
+            const vistas = ['vista-login', 'vista-inicio', 'vista-temas', 'vista-actividades'];
+            vistas.forEach(v => document.getElementById(v).classList.add('hidden'));
+            document.getElementById(idVista).classList.remove('hidden');
+        }
+
+        function irAMateria(nombreMateria) {
+            document.getElementById('titulo-materia').innerText = nombreMateria;
+            const lista = document.getElementById('lista-temas');
+            lista.innerHTML = `
+                <button class="btn-menu" onclick="irATema('Bloque 1: Fundamentos')">Tema 1: Fundamentos</button>
+                <button class="btn-menu" onclick="irATema('Bloque 2: Aplicaciones')">Tema 2: Aplicaciones</button>
+            `;
+            mostrarVista('vista-temas');
+        }
+
+        function irATema(nombreTema) {
+            document.getElementById('titulo-tema').innerText = nombreTema;
+            document.getElementById('btn-volver-temas').onclick = () => mostrarVista('vista-temas');
+            mostrarVista('vista-actividades');
+            
+            document.getElementById('visor-contenido').classList.add('hidden');
+            document.getElementById('visor-contenido').textContent = "";
+            document.getElementById('btn-guardar-nota').classList.add('hidden');
+            document.getElementById('archivo-clase').value = "";
+            
+            mostrarTareasGuardadas();
+        }
+
+        // --- SESIÓN ---
         const formLogin = document.getElementById('form-login');
-        const divLogin = document.getElementById('contenedor-login');
-        const divSesion = document.getElementById('contenedor-sesion');
 
         window.onload = function() {
             if (localStorage.getItem('sesion_activa') === 'true') {
                 mostrarInterfazSesion();
+                mostrarVista('vista-inicio');
             }
         };
 
@@ -60,60 +140,145 @@
             const formData = new FormData();
             formData.append('matricula', matriculaVal);
 
-            fetch('/acceder', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
+            fetch('/acceder', { method: 'POST', body: formData })
+            .then(res => res.json())
             .then(data => {
                 if (data.success) {
-                    // Ahora pasamos todos los datos que manda el servidor
-                    guardarDatosLocal(data.nombre, data.matricula, data.sede, data.grupo, data.especialidad);
+                    localStorage.setItem('usuario_nombre', data.nombre);
+                    localStorage.setItem('usuario_matricula', data.matricula);
+                    localStorage.setItem('usuario_sede', data.sede);
+                    localStorage.setItem('usuario_grupo', data.grupo);
+                    localStorage.setItem('usuario_especialidad', data.especialidad);
+                    localStorage.setItem('sesion_activa', 'true');
                     mostrarInterfazSesion();
-                } else {
-                    alert("La matrícula no existe en la base de datos.");
-                }
-            })
-            .catch(error => {
-                alert("Error: No se pudo conectar con el servidor del profesor.");
-            });
+                    mostrarVista('vista-inicio');
+                } else { alert("Matrícula no encontrada."); }
+            }).catch(() => alert("Error de conexión."));
         });
 
-        // Actualizado para guardar sede y grupo
-        function guardarDatosLocal(nombre, matricula, sede, grupo, especialidad) {
-            localStorage.setItem('usuario_nombre', nombre);
-            localStorage.setItem('usuario_matricula', matricula);
-            localStorage.setItem('usuario_sede', sede);
-            localStorage.setItem('usuario_grupo', grupo);
-            localStorage.setItem('usuario_especialidad', especialidad);
-            localStorage.setItem('sesion_activa', 'true');
-        }
-
         function mostrarInterfazSesion() {
-            divLogin.classList.add('hidden');
-            divSesion.classList.remove('hidden');
-            
             const nombre = localStorage.getItem('usuario_nombre');
-            const matricula = localStorage.getItem('usuario_matricula');
-            const sede = localStorage.getItem('usuario_sede');
-            const grupo = localStorage.getItem('usuario_grupo');
-            const especialidad = localStorage.getItem('usuario_especialidad');
-            
             document.getElementById('mensaje-bienvenida').innerText = `¡Hola, ${nombre}!`;
-            
-            // Mostramos la ficha escolar completa
             document.getElementById('info-alumno').innerHTML = `
-                <strong>Matrícula:</strong> ${matricula}<br>
-                <strong>Sede:</strong> ${sede}<br>
-                <strong>Grupo:</strong> ${grupo}<br>
-                <strong>Especialidad:</strong> ${especialidad}
+                <strong>Matrícula:</strong> ${localStorage.getItem('usuario_matricula')}<br>
+                <strong>Grupo:</strong> ${localStorage.getItem('usuario_grupo')}<br>
+                <strong>Especialidad:</strong> ${localStorage.getItem('usuario_especialidad')}
             `;
         }
 
         function cerrarSesion() {
-            if(confirm("¿Seguro que quieres cerrar sesión? Necesitarás al profesor para entrar de nuevo.")) {
+            if(confirm("¿Seguro? Necesitarás internet para volver a entrar.")) {
                 localStorage.clear();
                 location.reload();
+            }
+        }
+
+        // --- INDEXED DB ---
+        let db;
+        const request = indexedDB.open("BibliotecaEscolar", 1);
+        request.onupgradeneeded = e => {
+            e.target.result.createObjectStore("tareas", { keyPath: "id", autoIncrement: true });
+        };
+        request.onsuccess = e => { db = e.target.result; };
+
+        let contenidoTemporal = "";
+        let nombreArchivoTemporal = "";
+
+        // --- LECTOR DEFINITIVO PARA MÓVIL ---
+        document.getElementById('archivo-clase').addEventListener('change', function(e) {
+            const archivo = e.target.files[0];
+            if (!archivo) return;
+            nombreArchivoTemporal = archivo.name;
+            
+            const lector = new FileReader();
+            
+            // Usamos onloadend para asegurar que el archivo terminó de procesarse
+            lector.onloadend = function(evt) {
+                if (evt.target.readyState === FileReader.DONE) {
+                    const texto = evt.target.result;
+                    contenidoTemporal = texto;
+                    
+                    const visor = document.getElementById('visor-contenido');
+                    
+                    // Pequeño delay para que el DOM del móvil reaccione
+                    setTimeout(() => {
+                        visor.textContent = texto; 
+                        visor.classList.remove('hidden');
+                        document.getElementById('btn-guardar-nota').classList.remove('hidden');
+                        // Feedback visual de carga exitosa
+                        visor.style.border = "2px solid #28a745";
+                        window.scrollTo(0, 150); 
+                    }, 150);
+                }
+            };
+            lector.readAsText(archivo, 'UTF-8');
+        });
+
+        document.getElementById('btn-guardar-nota').onclick = () => {
+            const tema = document.getElementById('titulo-tema').innerText;
+            const transaccion = db.transaction(["tareas"], "readwrite");
+            transaccion.objectStore("tareas").add({ 
+                tema: tema, 
+                nombre: nombreArchivoTemporal, 
+                contenido: contenidoTemporal,
+                fecha: new Date().toLocaleDateString()
+            });
+            transaccion.oncomplete = () => {
+                alert("Guardado correctamente.");
+                mostrarTareasGuardadas();
+            };
+        };
+
+        function mostrarTareasGuardadas() {
+            const lista = document.getElementById('notas-locales');
+            const temaActual = document.getElementById('titulo-tema').innerText;
+            lista.innerHTML = "";
+            
+            if(!db) return;
+            const almacen = db.transaction("tareas", "readonly").objectStore("tareas");
+            almacen.openCursor().onsuccess = e => {
+                const cursor = e.target.result;
+                if (cursor) {
+                    if (cursor.value.tema === temaActual) {
+                        const contenedor = document.createElement('div');
+                        contenedor.className = "contenedor-nota";
+                        
+                        const div = document.createElement('div');
+                        div.className = "nota-guardada";
+                        div.innerHTML = `<strong>${cursor.value.nombre}</strong><br><small>${cursor.value.fecha}</small>`;
+                        
+                        const textoGuardado = cursor.value.contenido;
+                        div.onclick = () => {
+                            const visor = document.getElementById('visor-contenido');
+                            visor.textContent = textoGuardado;
+                            visor.classList.remove('hidden');
+                            visor.style.border = "2px solid #28a745";
+                            window.scrollTo(0,0);
+                        };
+
+                        const btnBorrar = document.createElement('button');
+                        btnBorrar.className = "btn-borrar";
+                        btnBorrar.innerHTML = "🗑️";
+                        const id = cursor.value.id;
+                        btnBorrar.onclick = (event) => {
+                            event.stopPropagation(); // Evita que se abra la nota al borrar
+                            borrarNota(id);
+                        };
+
+                        contenedor.appendChild(div);
+                        contenedor.appendChild(btnBorrar);
+                        lista.appendChild(contenedor);
+                    }
+                    cursor.continue();
+                }
+            };
+        }
+
+        function borrarNota(id) {
+            if(confirm("¿Eliminar actividad?")) {
+                const transaccion = db.transaction(["tareas"], "readwrite");
+                transaccion.objectStore("tareas").delete(id);
+                transaccion.oncomplete = () => mostrarTareasGuardadas();
             }
         }
     </script>

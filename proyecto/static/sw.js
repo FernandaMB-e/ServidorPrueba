@@ -1,15 +1,14 @@
-const CACHE_NAME = 'escolar-v5'; // Subimos a v5
+const CACHE_NAME = 'escolar-v9'; // Subimos a v9 para forzar la actualización
 const assets = [
   '/',
   '/static/manifest.json',
-  '/static/logo.jpeg' // CAMBIO: Debe ser igual al del manifest.json
+  '/static/logo.jpeg' 
 ];
 
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
-      // Intentamos cachear los archivos, si falla uno, no se instala
-      return cache.addAll(assets);
+      return cache.addAll(assets).catch(err => console.log("Error en cacheo inicial:", err));
     })
   );
   self.skipWaiting(); 
@@ -27,15 +26,23 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
+  // Solo manejamos peticiones GET
   if (e.request.method !== 'GET') return;
 
+  // ESTRATEGIA: Cache First (Priorizar Caché)
+  // Esto hace que la carga sea instantánea aunque el servidor esté apagado
   e.respondWith(
     caches.match(e.request).then(cachedResponse => {
       if (cachedResponse) {
-        return cachedResponse;
+        return cachedResponse; // Si está en caché, lo devuelve de inmediato
       }
-      return fetch(e.request).catch(() => {
-        // Si no hay red y es una navegación, forzamos el inicio
+
+      // Si no está en caché, intenta buscarlo en la red
+      return fetch(e.request).then(networkResponse => {
+        // Opcional: podrías guardar nuevas peticiones en caché aquí
+        return networkResponse;
+      }).catch(() => {
+        // Si falla la red y es una navegación, mostramos la raíz
         if (e.request.mode === 'navigate') {
           return caches.match('/');
         }
