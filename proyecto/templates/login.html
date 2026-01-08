@@ -15,7 +15,6 @@
         .hidden { display: none !important; }
         .info-ficha { text-align: left; background: #f8f9fa; padding: 10px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #007bff; font-size: 0.9rem; }
         
-        /* VISOR REFORZADO PARA MÓVIL */
         .visor { 
             background: #ffffff !important; 
             border: 2px solid #007bff; 
@@ -29,7 +28,7 @@
             max-height: 400px; 
             overflow-y: auto; 
             word-wrap: break-word;
-            color: #000000; /* Forzamos color negro */
+            color: #000000;
             display: block;
         }
         .contenedor-nota { display: flex; align-items: center; gap: 5px; margin-top: 8px; }
@@ -42,10 +41,7 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          // Registramos y forzamos actualización
-          navigator.serviceWorker.register('/sw.js').then(reg => {
-              reg.update(); 
-          });
+          navigator.serviceWorker.register('/sw.js').then(reg => { reg.update(); });
         });
       }
     </script>
@@ -89,7 +85,7 @@
         <button id="btn-guardar-nota" class="hidden" style="background: #28a745;">💾 Guardar actividad en el celular</button>
 
         <hr>
-        <h4>Actividades guardadas:</h4>
+        <h4>Mis actividades guardadas:</h4>
         <div id="notas-locales"></div>
     </div>
 
@@ -184,62 +180,61 @@
         let contenidoTemporal = "";
         let nombreArchivoTemporal = "";
 
-        // --- LECTOR DEFINITIVO PARA MÓVIL ---
+        // --- LECTOR ---
         document.getElementById('archivo-clase').addEventListener('change', function(e) {
             const archivo = e.target.files[0];
             if (!archivo) return;
             nombreArchivoTemporal = archivo.name;
-            
             const lector = new FileReader();
-            
-            // Usamos onloadend para asegurar que el archivo terminó de procesarse
             lector.onloadend = function(evt) {
                 if (evt.target.readyState === FileReader.DONE) {
-                    const texto = evt.target.result;
-                    contenidoTemporal = texto;
-                    
+                    contenidoTemporal = evt.target.result;
                     const visor = document.getElementById('visor-contenido');
-                    
-                    // Pequeño delay para que el DOM del móvil reaccione
                     setTimeout(() => {
-                        visor.textContent = texto; 
+                        visor.textContent = contenidoTemporal; 
                         visor.classList.remove('hidden');
                         document.getElementById('btn-guardar-nota').classList.remove('hidden');
-                        // Feedback visual de carga exitosa
                         visor.style.border = "2px solid #28a745";
-                        window.scrollTo(0, 150); 
                     }, 150);
                 }
             };
             lector.readAsText(archivo, 'UTF-8');
         });
 
+        // --- GUARDAR CON FILTRO DE USUARIO ---
         document.getElementById('btn-guardar-nota').onclick = () => {
             const tema = document.getElementById('titulo-tema').innerText;
+            const matriculaActual = localStorage.getItem('usuario_matricula'); // <--- CLAVE: Identificar dueño
+            
             const transaccion = db.transaction(["tareas"], "readwrite");
             transaccion.objectStore("tareas").add({ 
+                usuario: matriculaActual, // <--- Guardamos quién la guardó
                 tema: tema, 
                 nombre: nombreArchivoTemporal, 
                 contenido: contenidoTemporal,
                 fecha: new Date().toLocaleDateString()
             });
             transaccion.oncomplete = () => {
-                alert("Guardado correctamente.");
+                alert("Guardado en tu cuenta.");
                 mostrarTareasGuardadas();
             };
         };
 
+        // --- MOSTRAR CON FILTRO DE USUARIO ---
         function mostrarTareasGuardadas() {
             const lista = document.getElementById('notas-locales');
             const temaActual = document.getElementById('titulo-tema').innerText;
-            lista.innerHTML = "";
+            const matriculaActual = localStorage.getItem('usuario_matricula'); // <--- CLAVE: Solo mis tareas
             
+            lista.innerHTML = "";
             if(!db) return;
+
             const almacen = db.transaction("tareas", "readonly").objectStore("tareas");
             almacen.openCursor().onsuccess = e => {
                 const cursor = e.target.result;
                 if (cursor) {
-                    if (cursor.value.tema === temaActual) {
+                    // FILTRO DOBLE: Tema actual Y matrícula actual
+                    if (cursor.value.tema === temaActual && cursor.value.usuario === matriculaActual) {
                         const contenedor = document.createElement('div');
                         contenedor.className = "contenedor-nota";
                         
@@ -252,7 +247,6 @@
                             const visor = document.getElementById('visor-contenido');
                             visor.textContent = textoGuardado;
                             visor.classList.remove('hidden');
-                            visor.style.border = "2px solid #28a745";
                             window.scrollTo(0,0);
                         };
 
@@ -260,8 +254,8 @@
                         btnBorrar.className = "btn-borrar";
                         btnBorrar.innerHTML = "🗑️";
                         const id = cursor.value.id;
-                        btnBorrar.onclick = (event) => {
-                            event.stopPropagation(); // Evita que se abra la nota al borrar
+                        btnBorrar.onclick = (ev) => {
+                            ev.stopPropagation();
                             borrarNota(id);
                         };
 
@@ -275,7 +269,7 @@
         }
 
         function borrarNota(id) {
-            if(confirm("¿Eliminar actividad?")) {
+            if(confirm("¿Eliminar tu actividad guardada?")) {
                 const transaccion = db.transaction(["tareas"], "readwrite");
                 transaccion.objectStore("tareas").delete(id);
                 transaccion.oncomplete = () => mostrarTareasGuardadas();

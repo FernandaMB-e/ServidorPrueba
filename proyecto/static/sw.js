@@ -1,4 +1,4 @@
-const CACHE_NAME = 'escolar-v9'; // Subimos a v9 para forzar la actualización
+const CACHE_NAME = 'escolar-v10'; // Subimos a v9 para forzar la actualización
 const assets = [
   '/',
   '/static/manifest.json',
